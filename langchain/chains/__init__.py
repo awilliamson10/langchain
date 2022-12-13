@@ -1,6 +1,7 @@
 """Chains are easily reusable components which can be linked together."""
 from langchain.chains.api.base import APIChain
 from langchain.chains.conversation.base import ConversationChain
+from langchain.chains.graphql.base import GraphQLChain
 from langchain.chains.llm import LLMChain
 from langchain.chains.llm_bash.base import LLMBashChain
 from langchain.chains.llm_checker.base import LLMCheckerChain
@@ -35,4 +36,5 @@ __all__ = [
     "TransformChain",
     "MapReduceChain",
     "OpenAIModerationChain",
+    "GraphQLChain",
 ]

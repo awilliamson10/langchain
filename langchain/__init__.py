@@ -3,6 +3,7 @@
 from langchain.agents import MRKLChain, ReActChain, SelfAskWithSearchChain
 from langchain.chains import (
     ConversationChain,
+    GraphQLChain,
     LLMBashChain,
     LLMChain,
     LLMCheckerChain,
@@ -14,6 +15,7 @@ from langchain.chains import (
     VectorDBQAWithSourcesChain,
 )
 from langchain.docstore import InMemoryDocstore, Wikipedia
+from langchain.graphql import GraphQLClient
 from langchain.llms import Cohere, HuggingFaceHub, OpenAI
 from langchain.logger import BaseLogger, StdOutLogger
 from langchain.prompts import (
@@ -57,4 +59,6 @@ __all__ = [
     "VectorDBQAWithSourcesChain",
     "QAWithSourcesChain",
     "PALChain",
+    "GraphQLChain",
+    "GraphQLClient",
 ]
