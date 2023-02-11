@@ -30,9 +30,7 @@ from langchain.utils import get_from_dict_or_env
 logger = logging.getLogger(__name__)
 
 
-def update_token_usage(
-    keys: Set[str], response: Dict[str, Any], token_usage: Dict[str, Any]
-) -> None:
+def update_token_usage(keys: Set[str], response: Dict[str, Any], token_usage: Dict[str, Any]) -> None:
     """Update token usage."""
     _keys_to_use = keys.intersection(response["usage"])
     for _key in _keys_to_use:
@@ -88,6 +86,7 @@ class BaseOpenAI(BaseLLM, BaseModel):
     """Adjust the probability of specific tokens being generated."""
     max_retries: int = 6
     """Maximum number of retries to make when generating."""
+    userid: str = ""
 
     class Config:
         """Configuration for this pydantic object."""
@@ -116,19 +115,14 @@ class BaseOpenAI(BaseLLM, BaseModel):
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and python package exists in environment."""
-        openai_api_key = get_from_dict_or_env(
-            values, "openai_api_key", "OPENAI_API_KEY"
-        )
+        openai_api_key = get_from_dict_or_env(values, "openai_api_key", "OPENAI_API_KEY")
         try:
             import openai
 
             openai.api_key = openai_api_key
             values["client"] = openai.Completion
         except ImportError:
-            raise ValueError(
-                "Could not import openai python package. "
-                "Please it install it with `pip install openai`."
-            )
+            raise ValueError("Could not import openai python package. " "Please it install it with `pip install openai`.")
         return values
 
     @property
@@ -179,18 +173,18 @@ class BaseOpenAI(BaseLLM, BaseModel):
 
     async def acompletion_with_retry(self, **kwargs: Any) -> Any:
         """Use tenacity to retry the async completion call."""
+        kwargs["headers"] = {"Helicone-User-ID": self.userid}
         retry_decorator = self._create_retry_decorator()
 
         @retry_decorator
         async def _completion_with_retry(**kwargs: Any) -> Any:
             # Use OpenAI's async api https://github.com/openai/openai-python#async-api
+            kwargs["headers"] = {"Helicone-User-ID": self.userid}
             return await self.client.acreate(**kwargs)
 
         return await _completion_with_retry(**kwargs)
 
-    def _generate(
-        self, prompts: List[str], stop: Optional[List[str]] = None
-    ) -> LLMResult:
+    def _generate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
         """Call out to OpenAI's endpoint with k unique prompts.
 
         Args:
@@ -219,9 +213,7 @@ class BaseOpenAI(BaseLLM, BaseModel):
             update_token_usage(_keys, response, token_usage)
         return self.create_llm_result(choices, prompts, token_usage)
 
-    async def _agenerate(
-        self, prompts: List[str], stop: Optional[List[str]] = None
-    ) -> LLMResult:
+    async def _agenerate(self, prompts: List[str], stop: Optional[List[str]] = None) -> LLMResult:
         """Call out to OpenAI's endpoint async with k unique prompts."""
         params = self._invocation_params
         sub_prompts = self.get_sub_prompts(params, prompts, stop)
@@ -250,19 +242,12 @@ class BaseOpenAI(BaseLLM, BaseModel):
             params["stop"] = stop
         if params["max_tokens"] == -1:
             if len(prompts) != 1:
-                raise ValueError(
-                    "max_tokens set to -1 not supported for multiple inputs."
-                )
+                raise ValueError("max_tokens set to -1 not supported for multiple inputs.")
             params["max_tokens"] = self.max_tokens_for_prompt(prompts[0])
-        sub_prompts = [
-            prompts[i : i + self.batch_size]
-            for i in range(0, len(prompts), self.batch_size)
-        ]
+        sub_prompts = [prompts[i : i + self.batch_size] for i in range(0, len(prompts), self.batch_size)]
         return sub_prompts
 
-    def create_llm_result(
-        self, choices: Any, prompts: List[str], token_usage: Dict[str, int]
-    ) -> LLMResult:
+    def create_llm_result(self, choices: Any, prompts: List[str], token_usage: Dict[str, int]) -> LLMResult:
         """Create the LLMResult from the choices and prompts."""
         generations = []
         for i, prompt in enumerate(prompts):
@@ -279,9 +264,7 @@ class BaseOpenAI(BaseLLM, BaseModel):
                     for choice in sub_choices
                 ]
             )
-        return LLMResult(
-            generations=generations, llm_output={"token_usage": token_usage}
-        )
+        return LLMResult(generations=generations, llm_output={"token_usage": token_usage})
 
     def stream(self, prompt: str, stop: Optional[List[str]] = None) -> Generator:
         """Call OpenAI with streaming flag and return the resulting generator.
